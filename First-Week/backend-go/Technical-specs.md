@@ -14,9 +14,41 @@ A language learning school wants to build a prototype of learning portal which w
 - The backend server will be written in Go
 - Does not require authentication/authorization, assume there is a single user
 - API will be code using Gin
+- Mage is a task runner for GO.
 - The API will always return JSON
 - The API will always receive JSON
 - The API will be documented using Swagger and OpenAPI
+
+### Directory Structure
+
+```text
+backend-go/
+├── cmd/                      # Main applications of the project
+│   └── api/                  # Our main API application
+│       └── main.go          # Entry point
+├── internal/                 # Private application and library code
+│   ├── api/                 # API specific code
+│   │   ├── handlers/        # HTTP request handlers
+│   │   ├── middleware/      # HTTP middleware
+│   │   └── router/         # Route definitions
+│   ├── domain/             # Business/domain models
+│   │   └── models/         # Data structures
+│   ├── repository/         # Data access layer
+│   │   └── sqlite/         # SQLite specific implementations
+│   └── service/            # Business logic layer
+├── pkg/                     # Library code that could be used by external applications
+│   ├── config/             # Configuration handling
+│   └── logger/             # Logging utilities
+├── migrations/             # Database migrations
+├── seeds/                  # Seed data files
+├── api/                    # OpenAPI/Swagger specs
+│   └── swagger.yaml
+├── scripts/                # Scripts for development
+├── test/                   # Additional test code
+├── magefile.go            # Mage task definitions
+├── go.mod
+└── README.md
+```
 
 ## Database Schema
 
@@ -682,7 +714,7 @@ Response:
   - group_id: ID of the group to study (required)
   - study_activity_id: ID of the study activity (required)
 
-## Mage Tasks
+## Task Runner Tasks
 
 Mage is a task runner for GO.
 Lets list out possible tasks we need for our lang portal.

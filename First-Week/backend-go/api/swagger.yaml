@@ -1,0 +1,214 @@
+openapi: 3.0.0
+info:
+  title: Language Learning Portal API
+  version: 1.0.0
+  description: API for managing language learning vocabulary and study sessions
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok 
+  /words:
+    get:
+      summary: List all words
+      operationId: listWords
+      responses:
+        '200':
+          description: A list of words
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Word'
+
+  /words/{id}:
+    get:
+      summary: Get a word by ID
+      operationId: getWord
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the word
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A word object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Word'
+        '404':
+          description: Word not found
+
+  /groups:
+    get:
+      summary: List all groups
+      operationId: listGroups
+      responses:
+        '200':
+          description: A list of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+
+  /group/{id}:
+    get:
+      summary: Get a group by ID
+      operationId: getGroup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the group
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A group object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '404':
+          description: Group not found
+
+  /study_activity/{id}:
+    get:
+      summary: Get a study activity by ID
+      operationId: getActivity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the study activity
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A study activity object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyActivity'
+        '404':
+          description: Study activity not found
+
+  /study_activities:
+    post:
+      summary: Create a new study activity
+      operationId: createActivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyActivity'
+      responses:
+        '201':
+          description: Study activity created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyActivity'
+
+  /study_session/{id}/words:
+    get:
+      summary: Get words associated with a study session
+      operationId: getSessionWords
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the study session
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of words associated with the session
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WordWithStats'
+
+components:
+  schemas:
+    Word:
+      type: object
+      properties:
+        id:
+          type: integer
+        kanji:
+          type: string
+        romaji:
+          type: string
+        english:
+          type: string
+        parts:
+          type: array
+          items:
+            type: string
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    StudyActivity:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        url:
+          type: string
+
+    WordWithStats:
+      type: object
+      properties:
+        id:
+          type: integer
+        kanji:
+          type: string
+        romaji:
+          type: string
+        english:
+          type: string
+        parts:
+          type: array
+          items:
+            type: string
+        stats:
+          type: object
+          properties:
+            correctCount:
+              type: integer
+            wrongCount:
+              type: integer
+            accuracy:
+              type: number
+              format: float

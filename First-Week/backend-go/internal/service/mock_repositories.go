@@ -392,3 +392,4 @@ func (m *mockStudySessionRepository) LoadSeedData(ctx context.Context, seedsDir 
 	m.sessions[2] = &models.StudySession{ID: 2, StudyActivityID: 1, GroupID: 1}
 	return nil
 }
+

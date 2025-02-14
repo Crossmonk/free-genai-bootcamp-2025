@@ -1,4 +1,4 @@
-package handlers
+package test
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 
 	"backend-go/internal/domain/models"
 	"backend-go/internal/service"
+	"backend-go/internal/api/handlers"
 )
 
 func setupActivityTest() (*gin.Engine, *service.StudyActivityService) {
@@ -21,7 +22,7 @@ func setupActivityTest() (*gin.Engine, *service.StudyActivityService) {
 	mockRepo := service.NewMockStudyActivityRepository()
 	sessionRepo := service.NewMockStudySessionRepository()
 	activityService := service.NewStudyActivityService(mockRepo, sessionRepo)
-	handler := NewStudyActivityHandler(activityService)
+	handler := handlers.NewStudyActivityHandler(activityService)
 
 	// Setup routes
 	r.GET("/api/study-activities", handler.ListActivities)

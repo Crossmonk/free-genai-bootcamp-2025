@@ -1,4 +1,4 @@
-package handlers
+package test
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 
 	"backend-go/internal/domain/models"
 	"backend-go/internal/service"
+	"backend-go/internal/api/handlers"
 )
 
 func setupWordTest() (*gin.Engine, *service.WordService) {
@@ -20,7 +21,7 @@ func setupWordTest() (*gin.Engine, *service.WordService) {
 
 	mockRepo := service.NewMockWordRepository()
 	wordService := service.NewWordService(mockRepo)
-	handler := NewWordHandler(wordService)
+	handler := handlers.NewWordHandler(wordService)
 
 	// Setup routes
 	r.GET("/api/words", handler.ListWords)

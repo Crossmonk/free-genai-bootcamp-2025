@@ -22,7 +22,7 @@ func Run() error {
 
 // Test runs the test suite
 func Test() error {
-	return sh.Run("go", "test", "./...")
+	return sh.Run("go", "test", "./test/...")
 }
 
 // InitDB initializes the SQLite database

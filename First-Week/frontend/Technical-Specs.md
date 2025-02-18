@@ -262,3 +262,16 @@ The purpose of this page is to configure the study portal.
 - POST /api/settings/full_reset
 - POST /api/settings/load_seed_data
 
+
+## Breadcrumbs
+
+We will use the shadcn ui breadcrumbs component to show the breadcrumbs.
+
+- Dashboard
+- Study Activities
+- Study Activity
+- Groups
+- Group
+- Study Sessions
+- Study Session
+- Settings

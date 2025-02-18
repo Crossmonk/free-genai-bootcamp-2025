@@ -24,7 +24,7 @@ export const Sidebar = () => {
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
       <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r bg-background px-6 pb-4">
         <div className="flex h-16 shrink-0 items-center">
-          <span className="text-2xl font-bold text-primary">Languedge</span>
+          <span className="text-2xl font-bold text-primary">Japanese Learning</span>
         </div>
         <nav className="flex flex-1 flex-col">
           <ul role="list" className="flex flex-1 flex-col gap-y-7">

@@ -8,6 +8,7 @@ You are building a web-app for a language learning platform.
 
 - React.js
 - Tailwind CSS
+- Vite.js (frontend tool)
 - Shadcn UI
 - Lucide Icons
 - React Router

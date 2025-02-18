@@ -1,5 +1,21 @@
 # Frontend Technical Specs
 
+## Role
+
+You are building a web-app for a language learning platform.
+
+## Tech Stack
+
+- React.js
+- Tailwind CSS
+- Shadcn UI
+- Lucide Icons
+- React Router
+- React Query
+- React Hook Form
+- React Toastify
+- React Icons 
+
 ## Pages
 
 ### Dashboard `/dashboard`

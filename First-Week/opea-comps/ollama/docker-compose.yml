@@ -28,3 +28,7 @@ services:
       LLM_MODEL_ID: ${LLM_MODEL_ID}
       host_ip: ${host_ip}
     entrypoint: ["/usr/bin/bash", "/entrypoint.sh"]
+
+networks:
+  default:
+    driver: bridge

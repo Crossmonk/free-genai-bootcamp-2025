@@ -19,9 +19,12 @@ services:
     container_name: ollama-server
     ports:
       - ${LLM_ENDPOINT_PORT:-8008}:11434
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
     environment:
       no_proxy: ${no_proxy}
       http_proxy: ${http_proxy}
       https_proxy: ${https_proxy}
       LLM_MODEL_ID: ${LLM_MODEL_ID}
       host_ip: ${host_ip}
+    entrypoint: ["/usr/bin/bash", "/entrypoint.sh"]

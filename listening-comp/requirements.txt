@@ -1,0 +1,7 @@
+youtube-transcript-api>=0.6.2
+chromadb>=0.4.22
+voicevox-python
+ffmpeg-python
+python-dotenv
+groq
+requests

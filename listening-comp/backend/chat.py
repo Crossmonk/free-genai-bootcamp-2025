@@ -1,8 +1,8 @@
-# groq_chat.py
-import requests
+import os
 import streamlit as st
 from typing import Optional, Dict, Any
-import os
+from groq import Groq # Import the Groq client
+
 
 # Model ID (replace with the Groq model you want to use)
 MODEL_ID = os.environ.get("GROQ_MODEL_ID")  # Example: "mixtral-8x7b-3277" or "llama3-8b-8192"
@@ -16,48 +16,32 @@ class GroqChat:
         if not self.api_key:
             raise ValueError("Groq API key not found. Set it as the environment variable GROQ_API_KEY or pass it to the constructor.")
 
-        self.base_url = "https://api.groq.com/openai" #correct
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        # Initialize the Groq client
+        self.groq_client = Groq(api_key=self.api_key)
+
 
     def generate_response(self, message: str, inference_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Generate a response using Groq"""
         if inference_config is None:
-            inference_config = {"temperature": 0.7, "max_tokens": 512}  # Add max_tokens
-
-        messages = [{"role": "user", "content": message}]
-
-        payload = {
-            "model": self.model_id,
-            "messages": messages,
-            "temperature": inference_config.get("temperature", 0.7),
-            "max_tokens" : inference_config.get("max_tokens", 512)
-        }
+            inference_config = {"temperature": 0.7, "max_tokens": 512}
 
         try:
-            response = requests.post(
-                url=f"{self.base_url}/chat/completions", #correct
-                headers=self.headers,
-                json=payload,
+            chat_completion = self.groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": message}],
+                model=self.model_id,
+                temperature=inference_config.get("temperature", 0.7),
+                max_tokens=inference_config.get("max_tokens", 512),
             )
-            response.raise_for_status()  # Raise an exception for bad status codes
-            response_json = response.json()
 
-            if response_json['choices']:
-                return response_json['choices'][0]['message']['content']
+            if chat_completion.choices and len(chat_completion.choices) > 0:
+                return chat_completion.choices[0].message.content
             else:
-                st.error(f"Error: No content returned from Groq")
+                st.error(f"Error: No content returned from Groq: {chat_completion}")
                 return None
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             st.error(f"Error generating response: {str(e)}")
             return None
-        except (KeyError, IndexError) as e:
-            st.error(f"Error parsing response: {str(e)}")
-            return None
-
 
 if __name__ == "__main__":
     chat = GroqChat()  # Uses environment variable for API key
@@ -67,3 +51,4 @@ if __name__ == "__main__":
             break
         response = chat.generate_response(user_input)
         print("Bot:", response)
+

@@ -2,88 +2,85 @@ import chromadb
 from chromadb.utils import embedding_functions
 import json
 import os
-import requests
 from typing import Dict, List, Optional
 
-class GroqEmbeddingFunction(embedding_functions.EmbeddingFunction):
-    def __init__(self, model_id: str, api_key: str, base_url: str = "https://api.groq.com/embeddings"):
-        self.model_id = model_id
-        self.api_key = api_key
-        self.base_url = base_url
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+# Import necessary libraries for Ollama embeddings
+# from langchain_community.embeddings import OllamaEmbeddings # Removed: Deprecated
+from langchain_ollama import OllamaEmbeddings # Updated: Import from langchain_ollama
+
+# Use a smaller model for faster processing. You can change this if needed.
+DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"  # Keeping this for comparison or if Ollama fails
+
+class OllamaEmbeddingFunction(embedding_functions.EmbeddingFunction):
+    def __init__(self, model_name: str = "llama2", base_url: str = "http://localhost:11434", device: str = "cpu"):
+        """
+        Initializes the embedding function with an Ollama model.
+
+        Args:
+            model_name (str): The name of the Ollama model. Defaults to "llama2"
+            base_url (str): The base URL of the Ollama API. Defaults to "http://localhost:11434"
+            device (str): Not used for Ollama, but kept for consistency.
+        """
+        self.model = OllamaEmbeddings(model=model_name, base_url=base_url)
 
     def __call__(self, texts: List[str]) -> List[List[float]]:
-        embeddings = []
-        for text in texts:
-            try:
-                response = requests.post(
-                    url=self.base_url,
-                    headers=self.headers,
-                    json={
-                        "model": self.model_id,
-                        "texts": [text]
-                    }
-                )
-                response.raise_for_status()
-                response_json = response.json()
-                # Adapt to your Groq response structure; this assumes a list of embeddings
-                embedding = response_json["embeddings"][0]  # Adjust if your response is different
-                embeddings.append(embedding)
-            except requests.exceptions.RequestException as e:
-                print(f"Error generating embedding: {str(e)}")
-                embeddings.append([0.0] * 768)  # Fallback: 768-dimensional zero vector (adjust as needed)
-            except (KeyError, IndexError) as e:
-                print(f"Error parsing Groq response: {str(e)}")
-                embeddings.append([0.0] * 768)  # Fallback: 768-dimensional zero vector (adjust as needed)
-        return embeddings
+        """
+        Generates embeddings for a list of texts using Ollama.
 
-class QuestionVectorStore:
-    def __init__(self, persist_directory: str = "backend/data/vectorstore"):
-        self.persist_directory = persist_directory
-        self.client = chromadb.PersistentClient(path=persist_directory)
+        Args:
+            texts (List[str]): The list of texts to embed.
 
-        groq_model_id = os.environ.get("GROQ_MODEL_ID")
-        groq_api_key = os.environ.get("GROQ_API_KEY")
+        Returns:
+            List[List[float]]: The list of embeddings.
+        """
+        try:
+            embeddings = self.model.embed_documents(texts)
+            return embeddings
+        except Exception as e:
+            print(f"Error generating embeddings with Ollama: {str(e)}")
+            # Fallback to a zero vector if Ollama fails
+            return [[0.0] * 384] * len(texts)  # Fallback: 384-dimensional zero vector
 
-        if not groq_model_id or not groq_api_key:
-            raise ValueError("GROQ_MODEL_ID and GROQ_API_KEY environment variables must be set.")
 
-        self.embedding_fn = GroqEmbeddingFunction(groq_model_id, groq_api_key)
+class SpacySentenceTransformerEmbeddingFunction(embedding_functions.EmbeddingFunction): #Added as fallback
+    def __init__(self, model_name: str = DEFAULT_MODEL_NAME, device: str = "cpu"):
+        """
+        Initializes the embedding function with a sentence-transformers model.
+
+        Args:
+            model_name (str): The name of the sentence-transformers model.
+            device (str): The device to use for the model ("cpu" or "cuda").
+        """
+        from sentence_transformers import SentenceTransformer
+        self.model = SentenceTransformer(model_name, device=device)
 
     def __call__(self, texts: List[str]) -> List[List[float]]:
-        embeddings = []
-        for text in texts:
-            try:
-                response = requests.post(
-                    url=self.base_url,
-                    headers=self.headers,
-                    json={
-                        "model": self.model_id,
-                        "texts": [text]
-                    }
-                )
-                response.raise_for_status()
-                response_json = response.json()
-                # Adapt to your Groq response structure; this assumes a list of embeddings
-                embedding = response_json["embeddings"][0]
-                embeddings.append(embedding)
-            except requests.exceptions.RequestException as e:
-                print(f"Error generating embedding: {str(e)}")
-                embeddings.append([0.0] * 768)  # Fallback: 768-dimensional zero vector (adjust as needed)
-            except (KeyError, IndexError) as e:
-                print(f"Error parsing Groq response: {str(e)}")
-                embeddings.append([0.0] * 768)  # Fallback: 768-dimensional zero vector (adjust as needed)
-        return embeddings
+        """
+        Generates embeddings for a list of texts.
+
+        Args:
+            texts (List[str]): The list of texts to embed.
+
+        Returns:
+            List[List[float]]: The list of embeddings.
+        """
+        try:
+            embeddings = self.model.encode(texts).tolist()
+            return embeddings
+        except Exception as e:
+            print(f"Error generating embeddings: {str(e)}")
+            return [[0.0] * 384] * len(texts)  # Fallback: 384-dimensional zero vector (adjust if you use a different model)
 
 
 class QuestionVectorStore:
-    def __init__(self, persist_directory: str = "backend/data/vectorstore", groq_model_id: str = None, groq_api_key: str = None):
+    def __init__(self, persist_directory: str = "backend/data/vectorstore", embedding_model_name: str = "llama2", embedding_device: str = "cpu", use_ollama:bool = True, ollama_base_url: str = "http://localhost:11434"):
         self.persist_directory = persist_directory
         self.client = chromadb.PersistentClient(path=persist_directory)
-        self.embedding_fn = GroqEmbeddingFunction(groq_model_id, groq_api_key or os.environ.get("GROQ_API_KEY"))
+        
+        if use_ollama:
+            self.embedding_fn = OllamaEmbeddingFunction(embedding_model_name, ollama_base_url, embedding_device)
+        else:
+            self.embedding_fn = SpacySentenceTransformerEmbeddingFunction(DEFAULT_MODEL_NAME, embedding_device) #Fallback
 
         self.collections = {
             "section2": self.client.get_or_create_collection(
@@ -98,23 +95,22 @@ class QuestionVectorStore:
             )
         }
 
-
     def add_questions(self, section_num: int, questions: List[Dict], video_id: str):
         """Add questions to the vector store"""
         if section_num not in [2, 3]:
             raise ValueError("Only sections 2 and 3 are currently supported")
-            
+
         collection = self.collections[f"section{section_num}"]
-        
+
         ids = []
         documents = []
         metadatas = []
-        
+
         for idx, question in enumerate(questions):
             # Create a unique ID for each question
             question_id = f"{video_id}_{section_num}_{idx}"
             ids.append(question_id)
-            
+
             # Store the full question structure as metadata
             metadatas.append({
                 "video_id": video_id,
@@ -122,11 +118,11 @@ class QuestionVectorStore:
                 "question_index": idx,
                 "full_structure": json.dumps(question)
             })
-            
+
             # Create a searchable document from the question content
             if section_num == 2:
                 document = f"""
-                Situation: {question['Introduction']}
+                Introduction: {question['Introduction']}
                 Dialogue: {question['Conversation']}
                 Question: {question['Question']}
                 """
@@ -136,7 +132,7 @@ class QuestionVectorStore:
                 Question: {question['Question']}
                 """
             documents.append(document)
-        
+
         # Add to collection
         collection.add(
             ids=ids,
@@ -145,60 +141,66 @@ class QuestionVectorStore:
         )
 
     def search_similar_questions(
-        self, 
-        section_num: int, 
-        query: str, 
+        self,
+        section_num: int,
+        query: str,
         n_results: int = 5
     ) -> List[Dict]:
         """Search for similar questions in the vector store"""
         if section_num not in [2, 3]:
             raise ValueError("Only sections 2 and 3 are currently supported")
-            
+
         collection = self.collections[f"section{section_num}"]
-        
+
         results = collection.query(
             query_texts=[query],
             n_results=n_results
         )
-        
+
         # Convert results to more usable format
         questions = []
         for idx, metadata in enumerate(results['metadatas'][0]):
             question_data = json.loads(metadata['full_structure'])
             question_data['similarity_score'] = results['distances'][0][idx]
             questions.append(question_data)
-            
+            #Add section_num key to be used in main.py
+            question_data['section_num'] = section_num
+
         return questions
 
     def get_question_by_id(self, section_num: int, question_id: str) -> Optional[Dict]:
         """Retrieve a specific question by its ID"""
         if section_num not in [2, 3]:
             raise ValueError("Only sections 2 and 3 are currently supported")
-            
+
         collection = self.collections[f"section{section_num}"]
-        
+
         result = collection.get(
             ids=[question_id],
             include=['metadatas']
         )
-        
+
         if result['metadatas']:
-            return json.loads(result['metadatas'][0]['full_structure'])
+            question_data = json.loads(result['metadatas'][0]['full_structure'])
+            #Add section_num key to be used in main.py
+            question_data['section_num'] = section_num
+            return question_data
         return None
 
     def parse_questions_from_file(self, filename: str) -> List[Dict]:
         """Parse questions from a structured text file"""
         questions = []
         current_question = {}
-        
+        section_num = int(os.path.basename(filename).split('_section')[1].split('.')[0]) # Extract section number from filename
+
         try:
             with open(filename, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-                
+
             i = 0
             while i < len(lines):
                 line = lines[i].strip()
-                
+
                 if line.startswith('<question>'):
                     current_question = {}
                 elif line.startswith('Introduction:'):
@@ -240,10 +242,10 @@ class QuestionVectorStore:
         """Index all questions from a file into the vector store"""
         # Extract video ID from filename
         video_id = os.path.basename(filename).split('_section')[0]
-        
+
         # Parse questions from file
         questions = self.parse_questions_from_file(filename)
-        
+
         # Add to vector store
         if questions:
             self.add_questions(section_num, questions, video_id)
@@ -252,16 +254,22 @@ class QuestionVectorStore:
 if __name__ == "__main__":
     # Example usage
     store = QuestionVectorStore()
-    
+
     # Index questions from files
     question_files = [
         ("backend/data/questions/sY7L5cfCWno_section2.txt", 2),
         ("backend/data/questions/sY7L5cfCWno_section3.txt", 3)
     ]
-    
+
     for filename, section_num in question_files:
         if os.path.exists(filename):
             store.index_questions_file(filename, section_num)
-    
+
     # Search for similar questions
     similar = store.search_similar_questions(2, "誕生日について質問", n_results=1)
+    print("Similar questions",similar)
+    # Example of get question by id
+    question_id = "sY7L5cfCWno_2_0"
+    question = store.get_question_by_id(2, question_id)
+    print("question by id", question)
+

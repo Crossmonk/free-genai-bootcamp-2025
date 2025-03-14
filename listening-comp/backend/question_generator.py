@@ -1,9 +1,9 @@
 import json
-import os  # Import the os module
+import os
 from typing import Dict, List, Optional
 from backend.vector_store import QuestionVectorStore
-import requests
-from dotenv import load_dotenv # Import load_dotenv
+from dotenv import load_dotenv
+from groq import Groq  # Import the Groq client
 
 # Load environment variables from .env file
 load_dotenv()
@@ -13,49 +13,39 @@ class QuestionGenerator:
         """Initialize Groq client and vector store"""
         self.vector_store = QuestionVectorStore()
         self.model_id = os.environ.get("GROQ_MODEL_ID")  # Replace with the Groq model ID you want to use
-        self.groq_api_url = "https://api.groq.com/openai/chat/completions" #correct
         # Read the API key from the environment variable
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         if not self.groq_api_key:
             raise ValueError("GROQ_API_KEY environment variable not set.")
+        
+        # Initialize the Groq client
+        self.groq_client = Groq(api_key=self.groq_api_key)
 
     def _invoke_groq(self, prompt: str) -> Optional[str]:
-        """Invoke Groq with the given prompt"""
+        """Invoke Groq with the given prompt using the Groq client."""
         try:
-            headers = {
-                "Authorization": f"Bearer {self.groq_api_key}",
-                "Content-Type": "application/json"
-            }
+            chat_completion = self.groq_client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                model=self.model_id,
+                temperature=0.7,
+                max_tokens=2048,
+            )
 
-            messages = [{"role": "user", "content": prompt}]
-
-            data = {
-                "model": self.model_id,
-                "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 2048  # adjust if needed
-            }
-
-            response = requests.post(self.groq_api_url, headers=headers, json=data)
-            response.raise_for_status()  # Raise an exception for bad status codes
-
-            response_json = response.json()
-
-            if 'choices' in response_json and len(response_json['choices']) > 0 and 'message' in response_json['choices'][0]:
-                return response_json['choices'][0]['message']['content']
+            if chat_completion.choices and len(chat_completion.choices) > 0:
+                return chat_completion.choices[0].message.content
             else:
-                print("Unexpected response format from Groq:", response_json)
+                print("Unexpected response format from Groq:", chat_completion)
                 return None
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             print(f"Error invoking Groq: {str(e)}")
             return None
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON response from Groq: {str(e)}")
-            return None
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            return None
+        
 
     def generate_similar_question(self, section_num: int, topic: str) -> Dict:
         """Generate a new question similar to existing ones on a given topic"""

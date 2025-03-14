@@ -5,3 +5,5 @@ ffmpeg-python
 python-dotenv
 groq
 requests
+sentence-transformers 
+langchain-ollama

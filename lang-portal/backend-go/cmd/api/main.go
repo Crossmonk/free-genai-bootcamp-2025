@@ -18,6 +18,9 @@ func main() {
 	// Load configuration
 	cfg := config.New()
 
+	// Override the port from config with 5000
+	cfg.ServerPort = "5000"
+
 	// Initialize database
 	db, err := sqlite.New(cfg.DBPath)
 	if err != nil {

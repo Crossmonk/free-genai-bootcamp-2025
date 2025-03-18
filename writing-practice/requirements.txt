@@ -1,0 +1,7 @@
+streamlit
+pillow
+requests
+openai
+python-dotenv
+manga-ocr
+numpy==2.2.4

@@ -5,7 +5,7 @@ import base64
 from PIL import Image
 import io
 import manga_ocr  # MangaOCR for Japanese text recognition
-import openai  # For LLM interactions
+from openai import OpenAI  # Import OpenAI from the openai package
 from dotenv import load_dotenv
 import os
 
@@ -13,12 +13,15 @@ import os
 load_dotenv()
 
 # Get the API key from the environment variables
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Check if API key is loaded correctly
-if not openai.api_key:
+if not openai_api_key:
     st.error("OPENAI_API_KEY not found in environment variables. Please check your .env file.")
     st.stop()
+
+# Initialize the OpenAI client
+client = OpenAI(api_key=openai_api_key)
 
 # Initialize session state variables if they don't exist
 if 'state' not in st.session_state:
@@ -47,7 +50,13 @@ def fetch_vocabulary(group_id):
     try:
         response = requests.get(f"http://localhost:5000/api/words")
         if response.status_code == 200:
-            return response.json()
+            print("-----------------------------------------------------------------------")
+            print(response.json()['data']['words'])
+            if isinstance(response.json()['data']['words'], list) and len(response.json()['data']['words']) > 0:
+                return response.json()['data']['words']
+            else:
+                st.error("Vocabulary data is empty or not in the expected format.")
+                return []
         else:
             st.error(f"Failed to fetch vocabulary: {response.status_code}")
             return []
@@ -68,12 +77,12 @@ def generate_sentence(word):
     """
     
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=[{"role": "system", "content": "You are a Japanese language tutor."},
                       {"role": "user", "content": prompt}]
         )
-        return response.choices[0].message["content"].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         st.error(f"Error generating sentence: {e}")
         return "I eat sushi."  # Fallback sentence
@@ -92,12 +101,12 @@ def translate_text(japanese_text):
     prompt = f"Translate the following Japanese text to English literally: {japanese_text}"
     
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "system", "content": "You are a Japanese translator."},
                       {"role": "user", "content": prompt}]
         )
-        return response.choices[0].message["content"].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         st.error(f"Error translating text: {e}")
         return ""
@@ -119,14 +128,14 @@ def grade_attempt(original_english, japanese_attempt, english_translation):
     """
     
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "system", "content": "You are a Japanese language teacher."},
                       {"role": "user", "content": prompt}]
         )
         
         # Parse the JSON response
-        feedback = json.loads(response.choices[0].message["content"])
+        feedback = json.loads(response.choices[0].message.content)
         return feedback
     except Exception as e:
         st.error(f"Error grading attempt: {e}")
@@ -144,7 +153,7 @@ def generate_new_question():
         word = random.choice(st.session_state.vocabulary)
         
         # Generate English sentence
-        english_sentence = generate_sentence(word["japanese"])
+        english_sentence = generate_sentence(word["kanji"])
         
         # Update session state
         st.session_state.english_sentence = english_sentence
@@ -189,7 +198,8 @@ def main():
         group_id = st.text_input("Enter vocabulary group ID:", "1")
         if st.button("Load Vocabulary"):
             st.session_state.vocabulary = fetch_vocabulary(group_id)
-            st.success(f"Loaded {len(st.session_state.vocabulary)} vocabulary items!")
+            if st.session_state.vocabulary:
+                st.success(f"Loaded {len(st.session_state.vocabulary)} vocabulary items!")
     
     # Render current state
     if st.session_state.state == "setup":
